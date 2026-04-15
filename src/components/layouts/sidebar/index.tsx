@@ -28,25 +28,21 @@ export default function Sidebar({
     {
       section: "MONITORING",
       items: [
-        { label: "Gate Log", icon: DoorOpen, path: "/gate-log" },
-        { label: "Visual Log", icon: Eye, path: "/visual-log" },
+        { label: "Visual Logs", icon: Eye, path: "/visual_log" },
+        { label: "Gate Access Logs", icon: DoorOpen, path: "/gate_log" },
       ],
     },
     {
       section: "MANAGEMENT",
       items: [
-        { label: "Administrator", icon: Shield, path: "/administrator" },
-        { label: "Driver", icon: Car, path: "/driver" },
+        { label: "Admin Management", icon: Shield, path: "/administrator" },
+        { label: "Driver Management", icon: Car, path: "/driver" },
       ],
     },
   ];
 
   return (
-    <aside
-      className={`${styles.sidebar} ${
-        open ? styles.open : styles.close
-      }`}
-    >
+    <aside className={`${styles.sidebar} ${open ? styles.open : styles.close}`}>
       {/* HEADER */}
       <div className={styles.sidebarHeader}>
         <div
@@ -68,11 +64,7 @@ export default function Sidebar({
       <div className={styles.menu}>
         {menu.map((group) => (
           <div key={group.section}>
-            {open && (
-              <p className={styles.sectionTitle}>
-                {group.section}
-              </p>
-            )}
+            {open && <p className={styles.sectionTitle}>{group.section}</p>}
 
             {group.items.map((item) => {
               const Icon = item.icon;
@@ -85,9 +77,7 @@ export default function Sidebar({
                 <div
                   key={item.path}
                   onClick={() => router.push(item.path)}
-                  className={`${styles.item} ${
-                    active ? styles.active : ""
-                  }`}
+                  className={`${styles.item} ${active ? styles.active : ""}`}
                 >
                   <Icon className={styles.icon} size={18} />
 
