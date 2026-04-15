@@ -2,6 +2,11 @@ import * as admin from "firebase-admin";
 import path from "path";
 import fs from "fs";
 
+// Memastikan jika firebase admin hanya berjalan di sisi server
+if (typeof window !== "undefined") {
+  throw new Error("Firebase Admin tidak boleh dijalankan di client-side!");
+}
+
 // Bungkus dalam fungsi agar aman dari siklus hot-reload Next.js
 function getAdminAuth() {
   if (!admin.apps.length) {

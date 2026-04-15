@@ -30,11 +30,14 @@ export default async function handler(
       try {
         // Ambil file (Aman untuk formidable v2 maupun v3)
         let file_gambar = files.file_gambar;
-        if (Array.isArray(file_gambar)) {
-          file_gambar = file_gambar[0]; // Jika array, ambil yang pertama
-        }
+        // if (Array.isArray(file_gambar)) {
+        //   file_gambar = file_gambar[0]; // Jika array, ambil yang pertama
+        // }
+        const singleFile = Array.isArray(file_gambar)
+          ? file_gambar[0]
+          : file_gambar;
 
-        if (!file_gambar) {
+        if (!singleFile) {
           console.error("❌ file_gambar tidak ditemukan di payload!");
           console.log("Isi files:", Object.keys(files)); // Debugging
           res.status(400).json({ error: "File gambar tidak ditemukan" });
@@ -51,7 +54,7 @@ export default async function handler(
         const confidence = getField(fields.confidence, "0%");
 
         // Baca file gambar
-        const imageBuffer = fs.readFileSync((file_gambar as File).filepath);
+        const imageBuffer = fs.readFileSync((singleFile as File).filepath);
         console.log(
           `📥 [NEXT.JS] Menerima gambar log. Status AI: ${status_ai}, Yakin: ${confidence}`,
         );
