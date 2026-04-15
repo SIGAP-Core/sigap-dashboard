@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import mqtt from "mqtt";
-import { adminAuth } from "../utils/db/firebase-admin";
+import { adminAuth } from "@/utils/db/firebase-admin";
 
 // --- KONFIGURASI HIVEMQ (Sama dengan Frontend) ---
 const MQTT_URL = process.env.NEXT_PUBLIC_MQTT_URL || "";
