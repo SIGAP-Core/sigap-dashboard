@@ -12,7 +12,7 @@ import {
   Cpu,
   XCircle,
 } from "lucide-react";
-import { cn } from "./utils/cn";
+import { cn } from "@/utils/cn";
 import { ImageWithFallback } from "../components/ImageWithFallback";
 
 export default function DashboardSigap() {
