@@ -27,7 +27,7 @@ const MOCK_VISUAL_LOGS : VisualLog[] = [
     id: "visual_003",
     timestamp: "2025-04-16 09:31:12",
     cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
+      "https://images.unsplash.com/photo-1557821552-17105176677c?w=200&h=150&fit=crop",
     aiDecision: "Failed",
     vehicleCount: 0,
     confidence: 34,
@@ -63,7 +63,7 @@ const MOCK_VISUAL_LOGS : VisualLog[] = [
     id: "visual_007",
     timestamp: "2025-04-16 10:31:08",
     cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
+      "https://images.unsplash.com/photo-1557821552-17105176677c?w=200&h=150&fit=crop",
     aiDecision: "Failed",
     vehicleCount: 0,
     confidence: 42,
