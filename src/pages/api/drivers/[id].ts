@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { adminDb } from "../../utils/db/firebase-admin";
+import { adminDb } from "@/utils/db/firebase-admin";
 
 type UserErrorResponse = {
   error: string;
