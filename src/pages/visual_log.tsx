@@ -9,7 +9,7 @@ const MOCK_VISUAL_LOGS : VisualLog[] = [
     id: "visual_001",
     timestamp: "2025-04-16 09:15:32",
     cameraImage:
-      "https://images.unsplash.com/photo-1761958329406-e86653c0df3e?w=200&h=150&fit=crop",
+      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
     aiDecision: "Success",
     vehicleCount: 1,
     confidence: 92,
@@ -18,7 +18,7 @@ const MOCK_VISUAL_LOGS : VisualLog[] = [
     id: "visual_002",
     timestamp: "2025-04-16 09:22:45",
     cameraImage:
-      "https://images.unsplash.com/photo-1760339900750-aa0a44a32e33?w=200&h=150&fit=crop",
+      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
     aiDecision: "Success",
     vehicleCount: 1,
     confidence: 88,
@@ -27,7 +27,7 @@ const MOCK_VISUAL_LOGS : VisualLog[] = [
     id: "visual_003",
     timestamp: "2025-04-16 09:31:12",
     cameraImage:
-      "https://images.unsplash.com/photo-1735402088872-f4e81cc906f0?w=200&h=150&fit=crop",
+      "https://images.unsplash.com/photo-1557821552-17105176677c?w=200&h=150&fit=crop",
     aiDecision: "Failed",
     vehicleCount: 0,
     confidence: 34,
@@ -36,7 +36,7 @@ const MOCK_VISUAL_LOGS : VisualLog[] = [
     id: "visual_004",
     timestamp: "2025-04-16 09:45:28",
     cameraImage:
-      "https://images.unsplash.com/photo-1758618666607-a122c12f8c74?w=200&h=150&fit=crop",
+      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
     aiDecision: "Success",
     vehicleCount: 2,
     confidence: 85,
@@ -45,7 +45,7 @@ const MOCK_VISUAL_LOGS : VisualLog[] = [
     id: "visual_005",
     timestamp: "2025-04-16 10:02:55",
     cameraImage:
-      "https://images.unsplash.com/photo-1557821552-17105176677c?w=200&h=150&fit=crop",
+      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
     aiDecision: "Success",
     vehicleCount: 1,
     confidence: 91,
@@ -54,7 +54,7 @@ const MOCK_VISUAL_LOGS : VisualLog[] = [
     id: "visual_006",
     timestamp: "2025-04-16 10:18:14",
     cameraImage:
-      "https://images.unsplash.com/photo-1559416481-cd4628902e4a?w=200&h=150&fit=crop",
+      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
     aiDecision: "Success",
     vehicleCount: 1,
     confidence: 87,
@@ -63,7 +63,7 @@ const MOCK_VISUAL_LOGS : VisualLog[] = [
     id: "visual_007",
     timestamp: "2025-04-16 10:31:08",
     cameraImage:
-      "https://images.unsplash.com/photo-1493195671595-30a50e2e9e0e?w=200&h=150&fit=crop",
+      "https://images.unsplash.com/photo-1557821552-17105176677c?w=200&h=150&fit=crop",
     aiDecision: "Failed",
     vehicleCount: 0,
     confidence: 42,
