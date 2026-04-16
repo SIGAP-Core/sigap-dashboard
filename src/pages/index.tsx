@@ -265,7 +265,7 @@ export default function DashboardSigap() {
             <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 lg:p-8 flex flex-col min-h-[500px]">
               <h2 className="text-xl font-semibold text-slate-200 mb-6 flex items-center gap-3">
                 <Camera className="w-6 h-6 text-green-400" />
-                LPR Camera Feed
+                Capture Camera Feed
                 <span className="ml-auto flex items-center gap-2 text-xs font-mono px-2 py-1 bg-slate-950 rounded border border-slate-800 text-slate-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
                   LIVE
