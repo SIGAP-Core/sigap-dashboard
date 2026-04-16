@@ -4,7 +4,7 @@ import { cn } from "@/utils/cn";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 
 // Mock data - nanti replace dengan Hadoop logs
-const MOCK_VISUAL_LOGS = [
+const MOCK_VISUAL_LOGS : VisualLog[] = [
   {
     id: "visual_001",
     timestamp: "2025-04-16 09:15:32",
