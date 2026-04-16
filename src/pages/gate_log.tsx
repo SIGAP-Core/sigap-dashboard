@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Search, Calendar, Download, ChevronDown, ChevronUp, Eye } from "lucide-react";
+import {
+  Search,
+  Calendar,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+} from "lucide-react";
 import { cn } from "@/utils/cn";
 
 // Mock data - nanti replace dengan Firebase
@@ -291,7 +298,7 @@ export default function GateAccessLogs() {
                             "text-xs font-semibold transition-all duration-200",
                             expandedId === log.id
                               ? "bg-cyan-500 text-slate-900 hover:bg-cyan-400"
-                              : "bg-slate-700 text-cyan-300 hover:bg-slate-600"
+                              : "bg-slate-700 text-cyan-300 hover:bg-slate-600",
                           )}
                         >
                           <Eye size={14} />
@@ -351,7 +358,10 @@ export default function GateAccessLogs() {
                             {/* Detail Footer */}
                             <div className="pt-4 border-t border-slate-700 mt-4">
                               <p className="text-xs text-slate-400">
-                                Log ID: <span className="text-slate-300 font-mono">{log.id}</span>
+                                Log ID:{" "}
+                                <span className="text-slate-300 font-mono">
+                                  {log.id}
+                                </span>
                               </p>
                             </div>
                           </div>
