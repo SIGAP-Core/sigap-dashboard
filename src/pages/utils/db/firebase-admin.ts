@@ -2,29 +2,24 @@ import * as admin from "firebase-admin";
 import path from "path";
 import fs from "fs";
 
-// Bungkus dalam fungsi agar aman dari siklus hot-reload Next.js
-function getAdminAuth() {
-  if (!admin.apps.length) {
-    try {
-      const serviceAccountPath = path.join(
-        process.cwd(),
-        "firebase-admin.json",
-      );
+if (!admin.apps.length) {
+  const serviceAccountPath = path.join(process.cwd(), "firebase-admin.json");
 
-      // Membaca file secara fisik, menghindari bug require() di Turbopack
-      const fileContent = fs.readFileSync(serviceAccountPath, "utf8");
-      const serviceAccount = JSON.parse(fileContent);
+  console.log("📁 PATH:", serviceAccountPath);
 
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-
-      console.log("✅ Firebase Admin Berhasil Terhubung!");
-    } catch (error) {
-      console.error("❌ Gagal inisialisasi Firebase Admin:", error);
-    }
+  if (!fs.existsSync(serviceAccountPath)) {
+    throw new Error("❌ firebase-admin.json NOT FOUND");
   }
-  return admin.auth();
+
+  const serviceAccount = JSON.parse(
+    fs.readFileSync(serviceAccountPath, "utf8")
+  );
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+
+  console.log("✅ Firebase Admin initialized");
 }
 
-export const adminAuth = getAdminAuth();
+export const adminDb = admin.firestore();
