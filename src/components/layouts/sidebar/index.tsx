@@ -31,8 +31,8 @@ export default function Sidebar({
     {
       section: "MONITORING",
       items: [
-        { label: "Gate Access Logs", icon: DoorOpen, path: "/gate-log" },
-        { label: "Visual Logs", icon: Eye, path: "/visual-log" },
+        { label: "Gate Access Logs", icon: DoorOpen, path: "/gate_log" },
+        { label: "Visual Logs", icon: Eye, path: "/visual_log" },
       ],
     },
     {
