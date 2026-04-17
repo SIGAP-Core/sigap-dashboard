@@ -24,7 +24,6 @@ const TampilanLogin = () => {
       event.currentTarget.elements.namedItem("password") as HTMLInputElement
     ).value;
 
-    console.log(`${email} ${password}`);
     const res = await signIn("credentials", {
       redirect: false,
       email,

@@ -33,12 +33,8 @@ export const authOptions: NextAuthOptions = {
             collection(db, "admin"),
             where("email", "==", firebaseUser.email)
           );
-          
-          console.log(`WOIOI 3 asiaiawaij ${credentials?.email} ${credentials?.password}`)
-          const snapshot = await getDocs(q);
 
-          console.log(`WOIOI 4 ${userCredential.user.email}`)
-          console.log(`WOIOI 5 ${snapshot.docs.length}`)
+          const snapshot = await getDocs(q);
           
           if (snapshot.empty) return null;
           
