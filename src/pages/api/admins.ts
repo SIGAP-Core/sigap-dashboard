@@ -5,6 +5,7 @@ type AdminRecord = {
   id: string;
   name: string;
   email: string;
+  password: string;
 };
 
 type ErrorResponse = {
@@ -24,6 +25,7 @@ export default async function handler(
           id: doc.id,
           name: (data.name as string) || "Unknown Admin",
           email: (data.email as string) || "no-reply@smartgate.sys",
+          password: (data.password as string) || "",
         };
       });
 
@@ -36,13 +38,17 @@ export default async function handler(
 
   if (req.method === "POST") {
     try {
-      const { name, email } = req.body as { name?: string; email?: string };
-      if (!name || !email) {
-        return res.status(400).json({ error: "Name and email are required" });
+      const { name, email, password } = req.body as { name?: string; email?: string; password?: string };
+      if (!name || !email || !password) {
+        return res.status(400).json({ error: "Name, email, and password are required" });
       }
 
-      const docRef = await adminDb.collection("admin").add({ name, email });
-      return res.status(201).json({ id: docRef.id, name, email } as AdminRecord);
+      if (password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters long" });
+      }
+
+      const docRef = await adminDb.collection("admin").add({ name, email, password });
+      return res.status(201).json({ id: docRef.id, name, email, password } as AdminRecord);
     } catch (error) {
       console.error("Failed to add admin record to Firestore:", error);
       return res.status(500).json({ error: "Failed to add admin record" });
