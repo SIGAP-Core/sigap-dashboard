@@ -1,0 +1,145 @@
+.wrapper {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: radial-gradient(circle at top, #0f2440, #070b14);
+}
+
+.card {
+  width: 380px;
+  padding: 28px;
+
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(0, 255, 255, 0.15);
+
+  border-radius: 16px;
+
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.logoWrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.logoImage {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 10px;
+
+  filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.6));
+}
+
+.logoText {
+  text-align: center;
+
+  h1 {
+    font-size: 16px;
+    color: #00e5ff;
+    letter-spacing: 1px;
+    margin: 0;
+  }
+
+  p {
+    font-size: 11px;
+    color: #94a3b8;
+    margin: 0;
+  }
+}
+
+/* ERROR */
+.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+
+  padding: 8px;
+  font-size: 12px;
+
+  border-radius: 8px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+/* FORM */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inputBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 11px;
+    color: #94a3b8;
+    letter-spacing: 1px;
+  }
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px;
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  color: #cbd5e1;
+
+  input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+  }
+}
+
+/* BUTTON */
+.button {
+  margin-top: 8px;
+
+  padding: 12px;
+  border-radius: 10px;
+
+  background: transparent;
+  border: 1px solid #00e5ff;
+
+  color: #00e5ff;
+  font-weight: 600;
+  letter-spacing: 1px;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+
+  &:hover {
+    background: rgba(0, 229, 255, 0.08);
+    box-shadow: 0 0 18px rgba(0, 229, 255, 0.35);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
