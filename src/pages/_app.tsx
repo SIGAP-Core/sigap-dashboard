@@ -1,6 +1,6 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import AppShell from "@/components/layouts/AppShell";
+import Appshell from "./../components/layouts/Appshell";
 import { SessionProvider } from "next-auth/react";
 
 export default function App({
@@ -17,9 +17,9 @@ export default function App({
       {isNoLayout ? (
         <Component {...pageProps} />
       ) : (
-        <AppShell>
+        <Appshell>
           <Component {...pageProps} />
-        </AppShell>
+        </Appshell>
       )}
     </SessionProvider>
   );
