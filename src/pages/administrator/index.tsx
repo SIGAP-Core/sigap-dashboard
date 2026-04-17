@@ -1,16 +1,19 @@
 import Head from "next/head";
 import React, { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, MoreVertical, ShieldCheck, UserCircle2, Search } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 type AdminRecord = {
   id: string;
   name: string;
   email: string;
+  password: string;
 };
 
 type ModalMode = "add" | "edit";
 
 export default function AdministratorPage() {
+  const { data: session } = useSession();
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -20,6 +23,7 @@ export default function AdministratorPage() {
   const [selectedAdmin, setSelectedAdmin] = useState<AdminRecord | null>(null);
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
+  const [formPassword, setFormPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -38,6 +42,7 @@ export default function AdministratorPage() {
         id: item.id,
         name: item.name || "Unknown Admin",
         email: item.email || "no-reply@smartgate.sys",
+        password: item.password || "",
       }));
 
       setAdmins(records);
@@ -58,6 +63,7 @@ export default function AdministratorPage() {
     setSelectedAdmin(null);
     setFormName("");
     setFormEmail("");
+    setFormPassword("");
     setFormError(null);
     setModalOpen(true);
   };
@@ -67,6 +73,7 @@ export default function AdministratorPage() {
     setSelectedAdmin(admin);
     setFormName(admin.name);
     setFormEmail(admin.email);
+    setFormPassword(admin.password);
     setFormError(null);
     setModalOpen(true);
   };
@@ -80,9 +87,20 @@ export default function AdministratorPage() {
   const handleSubmit = async () => {
     const trimmedName = formName.trim();
     const trimmedEmail = formEmail.trim();
+    const trimmedPassword = formPassword.trim();
 
     if (!trimmedName || !trimmedEmail) {
       setFormError("Name and email are required.");
+      return;
+    }
+
+    if (modalMode === "add" && !trimmedPassword) {
+      setFormError("Password is required for new admins.");
+      return;
+    }
+
+    if (trimmedPassword && trimmedPassword.length < 6) {
+      setFormError("Password must be at least 6 characters long.");
       return;
     }
 
@@ -94,7 +112,7 @@ export default function AdministratorPage() {
         const response = await fetch("/api/admins", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: trimmedName, email: trimmedEmail }),
+          body: JSON.stringify({ name: trimmedName, email: trimmedEmail, password: trimmedPassword }),
         });
 
         if (!response.ok) {
@@ -102,10 +120,15 @@ export default function AdministratorPage() {
           throw new Error(body?.error || `Status ${response.status}`);
         }
       } else if (modalMode === "edit" && selectedAdmin) {
+        const updateData: any = { name: trimmedName, email: trimmedEmail };
+        if (trimmedPassword) {
+          updateData.password = trimmedPassword;
+        }
+
         const response = await fetch(`/api/admins/${selectedAdmin.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: trimmedName, email: trimmedEmail }),
+          body: JSON.stringify(updateData),
         });
 
         if (!response.ok) {
@@ -265,13 +288,14 @@ export default function AdministratorPage() {
                         <button
                           type="button"
                           onClick={() => handleDelete(admin)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-rose-400"
+                          disabled={admin.id === (session?.user as any)?.id}
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
-                        <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-slate-100">
+                        {/* <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-slate-100">
                           <MoreVertical className="h-4 w-4" />
-                        </button>
+                        </button> */}
                       </div>
                     </div>
                   ))
@@ -291,8 +315,8 @@ export default function AdministratorPage() {
                   </h2>
                   <p className="mt-2 text-sm text-slate-400">
                     {modalMode === "add"
-                      ? "Provide the administrator’s full name and email address."
-                      : "Update the admin’s name or email address."}
+                      ? "Provide the administrator’s full name, email address, and password."
+                      : "Update the admin’s name, email address, or password."}
                   </p>
                 </div>
                 <button
@@ -322,6 +346,16 @@ export default function AdministratorPage() {
                     onChange={(event) => setFormEmail(event.target.value)}
                     type="email"
                     placeholder="admin@example.com"
+                    className="w-full rounded-3xl border border-slate-800/80 bg-slate-950/90 px-5 py-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Password</label>
+                  <input
+                    value={formPassword}
+                    onChange={(event) => setFormPassword(event.target.value)}
+                    type="password"
+                    placeholder={modalMode === "add" ? "Enter password" : "Leave blank to keep current password"}
                     className="w-full rounded-3xl border border-slate-800/80 bg-slate-950/90 px-5 py-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
                   />
                 </div>
