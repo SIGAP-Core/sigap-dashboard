@@ -1,9 +1,8 @@
-
 .navbar {
   height: 60px;
 
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
 
   padding: 0 18px;
@@ -17,7 +16,7 @@
   transition: all 0.3s ease;
 
   background: #0b1220;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* SINKRON SIDEBAR */
@@ -30,31 +29,22 @@
   margin-left: 72px;
   width: calc(100% - 72px);
 }
-
-/* RIGHT WRAPPER */
 .right {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 12px;
+  padding-right: 16px;
 }
 
-/* USER GREETING */
-.user {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  font-size: 13px;
-  color: #cbd5e1;
+.welcomeText {
+  font-size: 14px;
+  color: #e5e7eb;
+  font-weight: 400;
 }
 
-.user span {
-  color: #9ca3af;
-}
-
-.user b {
-  color: #ffffff;
+.welcomeText b {
   font-weight: 600;
+  color: #ffffff;
 }
 
 /* BUTTON STYLE BASE */
@@ -71,23 +61,7 @@
   transition: 0.2s ease;
 }
 
-/* LOGIN */
-.loginBtn {
-  background: #2563eb;
-  color: white;
+/* optional: hover navbar effect */
+.navbar:hover {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
-
-.loginBtn:hover {
-  background: #1d4ed8;
-}
-
-/* LOGOUT */
-.logoutBtn {
-  background: #ef4444;
-  color: white;
-}
-
-.logoutBtn:hover {
-  background: #dc2626;
-}
-
