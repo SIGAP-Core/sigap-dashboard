@@ -2,7 +2,7 @@ import { useState } from "react";
 import Navbar from "@/components/layouts/navbar";
 import Sidebar from "@/components/layouts/sidebar";
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function Appshell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
 
   return (

@@ -8,6 +8,14 @@ import {
   Eye,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { app } from "@/utils/db/firebase";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  orderBy,
+} from "firebase/firestore";
 
 // Mock data - nanti replace dengan Firebase
 const MOCK_GATE_LOGS = [
@@ -63,6 +71,51 @@ interface GateLog {
   licensePlate: string;
 }
 
+// Format timestamp: convert int64 (milliseconds) to "YYYY-MM-DD HH:mm:ss"
+const formatTimestamp = (timestamp: number | any): string => {
+  try {
+    // Handle Firestore Timestamp objects
+    let date: Date;
+
+    if (timestamp && typeof timestamp === "object" && timestamp.toDate) {
+      // Firestore Timestamp object
+      date = timestamp.toDate();
+    } else if (
+      timestamp &&
+      typeof timestamp === "object" &&
+      timestamp.seconds
+    ) {
+      // Firestore Timestamp with seconds property
+      date = new Date(timestamp.seconds * 1000);
+    } else {
+      // Plain milliseconds timestamp
+      date = new Date(timestamp || Date.now());
+    }
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+
+    // Check if year is reasonable (before 1970 or way in future indicates problem)
+    const year = date.getFullYear();
+    if (year < 1970 || year > 2100) {
+      return "Invalid Date";
+    }
+
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  } catch (error) {
+    console.error("Error formatting timestamp:", timestamp, error);
+    return "Invalid Date";
+  }
+};
+
 export default function GateAccessLogs() {
   const [logs, setLogs] = useState<GateLog[]>(MOCK_GATE_LOGS);
   const [filteredLogs, setFilteredLogs] = useState<GateLog[]>(MOCK_GATE_LOGS);
@@ -70,6 +123,42 @@ export default function GateAccessLogs() {
   const [dateFilter, setDateFilter] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Fetch data dari Firebase Firestore
+  useEffect(() => {
+    const fetchGateLogs = async () => {
+      try {
+        setIsLoading(true);
+        const db = getFirestore(app);
+        const q = query(
+          collection(db, "access_logs"),
+          orderBy("tanggal", "desc"),
+        );
+        const querySnapshot = await getDocs(q);
+
+        const data: GateLog[] = querySnapshot.docs.map((doc, index) => {
+          const docData = doc.data();
+          return {
+            id: doc.id,
+            timestamp: formatTimestamp(docData.tanggal),
+            driverName: docData.nama || "Unknown",
+            driverUID: `driver_${doc.id.substring(0, 12)}`, // Generate dari doc ID
+            licensePlate: docData.plat || "-",
+          };
+        });
+
+        setLogs(data);
+      } catch (error) {
+        console.error("Error fetching gate logs:", error);
+        // Keep mock data if error
+        setLogs(MOCK_GATE_LOGS);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchGateLogs();
+  }, []);
 
   // Filter logs berdasarkan search dan date
   useEffect(() => {
@@ -93,29 +182,6 @@ export default function GateAccessLogs() {
 
     setFilteredLogs(result);
   }, [searchInput, dateFilter, logs]);
-
-  // Fetch data dari Firebase (nanti implementasi)
-  useEffect(() => {
-    // TODO: implementasi Firebase fetch
-    // const fetchGateLogs = async () => {
-    //   try {
-    //     setIsLoading(true);
-    //     const db = getFirestore();
-    //     const q = query(collection(db, "gate_logs"), orderBy("timestamp", "desc"));
-    //     const querySnapshot = await getDocs(q);
-    //     const data = querySnapshot.docs.map(doc => ({
-    //       id: doc.id,
-    //       ...doc.data()
-    //     })) as GateLog[];
-    //     setLogs(data);
-    //   } catch (error) {
-    //     console.error("Error fetching gate logs:", error);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-    // fetchGateLogs();
-  }, []);
 
   const handleExport = () => {
     const csv = [

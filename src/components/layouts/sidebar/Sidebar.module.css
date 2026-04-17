@@ -27,7 +27,7 @@
   height: 60px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* justify-content: space-between; */
 
   padding: 0 12px;
   border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -64,6 +64,8 @@
 
   cursor: pointer;
   color: white;
+  
+  margin-left: auto;
 }
 
 /* MENU */
@@ -132,3 +134,42 @@
   overflow: hidden;
 }
 
+.signOut {
+  margin-top: auto;
+  color: #ef4444;
+}
+
+.signOut:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.logoWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.logoImage {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+/* teks logo */
+.logoText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.logoTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #00e5ff;
+}
+
+.logoSub {
+  font-size: 11px;
+  color: #6b7280;
+}
