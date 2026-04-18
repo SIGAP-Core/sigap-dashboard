@@ -10,25 +10,42 @@ export const config = {
 };
 
 // FUNGSI BROADCAST MQTT DARI NEXT.JS
-function publishToMQTT(payload: any) {
-  const brokerUrl = process.env.NEXT_PUBLIC_MQTT_URL || "";
-  const options = {
-    username: process.env.NEXT_PUBLIC_MQTT_USER || "",
-    password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || "",
-  };
-  const topic = process.env.NEXT_PUBLIC_TOPIC_UI_STATE || "";
+function publishToMQTT(payload: any): Promise<void> {
+  return new Promise((resolve)=> {
+    let brokerUrl = process.env.NEXT_PUBLIC_MQTT_URL || "";
 
-  console.log("🔄 [NEXT.JS] Menyambung ke MQTT Broker untuk broadcast...");
-  const client = mqtt.connect(brokerUrl, options);
+    const options = {
+      username: process.env.NEXT_PUBLIC_MQTT_USER || "",
+      password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || "",
+      connectTimeout: 5000,
+    };
 
-  client.on("connect", () => {
-    client.publish(topic, JSON.stringify(payload));
-    console.log("📢 [NEXT.JS] Sukses menembak status ke Dashboard via MQTT!");
-    client.end(); // Langsung putus setelah nembak biar memori server tetap lega
-  });
+    const topic = process.env.NEXT_PUBLIC_TOPIC_UI_STATE || "";
 
-  client.on("error", (err) => {
-    console.error("❌ [NEXT.JS] Gagal konek MQTT:", err);
+    console.log("🔄 [NEXT.JS] Menyambung ke MQTT Broker untuk broadcast...");
+    const client = mqtt.connect(brokerUrl, options);
+
+    client.on("connect", () => {
+      console.log("✅ [NEXT.JS] Terhubung ke Broker! Menembak pesan...");
+
+      // Publish dan tunggu callback selesai
+      client.publish(topic, JSON.stringify(payload), (err) => {
+        if (err) {
+          console.error("❌ [NEXT.JS] Gagal publish:", err);
+        } else {
+          console.log("📢 [NEXT.JS] Sukses menembak status ke Dashboard via MQTT!");
+        }
+        client.end(); // Langsung putus
+        resolve(); // Notify NextJs jika tugas selesai
+      });
+    });
+
+    client.on("error", (err) => {
+      console.error("❌ [NEXT.JS] Gagal connect MQTT:", err);
+      client.end();
+      resolve(); // Tetap resolve agar tidak error 500
+    });
+
   });
 }
 
@@ -97,7 +114,7 @@ export default async function handler(
           const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
           // Tembak ke UI
-          publishToMQTT({
+          await publishToMQTT({
             status: mqtt_status,
             vehicle_count: parseInt(vehicle_count),
             confidence: confidence,
@@ -108,9 +125,7 @@ export default async function handler(
           console.log(`⚠️ [NEXT.JS] MQTT Broadcast di-skip (Kondisi needs_broadcast: false)`);
         }
 
-        // ==========================================
-        // 🚀 PROSES BACKGROUND HADOOP
-        // ==========================================
+        // PROSES BACKGROUND HADOOP
         uploadToHadoopBackground(imageBuffer, timestamp, {
           status_ai,
           vehicle_count,
