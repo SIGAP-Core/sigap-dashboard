@@ -19,7 +19,7 @@ export default async function handler(
 ) {
   if (req.method === "GET") {
     try {
-      const snapshot = await adminDb.collection("user").get();
+      const snapshot = await adminDb.collection("driver").get();
       const users: UserRecord[] = snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
@@ -45,7 +45,7 @@ export default async function handler(
         return res.status(400).json({ error: "Name, email, license, and status are required" });
       }
 
-      const docRef = await adminDb.collection("user").add({ name, email, license, status });
+      const docRef = await adminDb.collection("driver").add({ name, email, license, status });
       return res.status(201).json({ id: docRef.id, name, email, license, status } as UserRecord);
     } catch (error) {
       console.error("Failed to add user record to Firestore:", error);
