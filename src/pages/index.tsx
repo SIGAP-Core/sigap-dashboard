@@ -1,5 +1,5 @@
 import Head from "next/head";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import mqtt, { MqttClient } from "mqtt";
 import {
   QrCode,
@@ -11,9 +11,19 @@ import {
   Server,
   Cpu,
   XCircle,
+  Terminal,
+  X,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { ImageWithFallback } from "../components/ImageWithFallback";
+
+// Interface untuk struktur Log
+interface SystemLog {
+  id: number;
+  time: string;
+  isJson: boolean;
+  payload: any;
+}
 
 export default function DashboardSigap() {
   const [isMounted, setIsMounted] = useState(false);
@@ -28,6 +38,11 @@ export default function DashboardSigap() {
     "Standby - Menunggu Kendaraan",
   );
   const [liveImage, setLiveImage] = useState<string | null>(null);
+
+  // --- STATE LOGGING DEBUGGER ---
+  const [isLogOpen, setIsLogOpen] = useState<boolean>(false);
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
 
   const PLACEHOLDER_IMG =
     "https://images.unsplash.com/photo-1760339900750-aa0a44a32e33?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjYXIlMjBmcm9udCUyMGxpY2Vuc2UlMjBwbGF0ZXxlbnwxfHx8fDE3NzYwNTg0ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080";
@@ -52,12 +67,19 @@ export default function DashboardSigap() {
   const topicGateControl = process.env.NEXT_PUBLIC_TOPIC_GATE_CONTROL || "";
   const topicRequestPhoto = process.env.NEXT_PUBLIC_TOPIC_REQUEST_PHOTO || "";
 
+  // Auto-scroll ke log paling bawah setiap ada log baru
+  useEffect(() => {
+    if (logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [systemLogs, isLogOpen]);
+
   // --- LOGIKA ROTASI DYNAMIC QR ---
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
     if (!isQrBlurred) {
-      generateNewQr(); // Buat QR pertama kali saat blur hilang
+      generateNewQr();
       interval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -87,7 +109,7 @@ export default function DashboardSigap() {
     setQrPayload(deepLink);
   };
 
-  // --- LOGIKA KONEKSI MQTT ---
+  // --- LOGIKA KONEKSI MQTT & PENERIMAAN LOG ---
   useEffect(() => {
     console.log("Menghubungkan ke HiveMQ via WebSocket...");
     const client = mqtt.connect(brokerUrl, options);
@@ -100,43 +122,56 @@ export default function DashboardSigap() {
 
     client.on("message", (topic: string, message: Buffer) => {
       const msgString = message.toString();
-      console.log(`📥 Pesan masuk di ${topic}: ${msgString}`);
+      const timeNow = new Date().toLocaleTimeString();
 
-      if (topic === topicUiState) {
-        try {
-          const payload = JSON.parse(msgString);
+      // Deteksi apakah pesan berupa JSON atau Teks Biasa (Log ESP32)
+      let parsedJson = null;
+      let isJson = false;
+      try {
+        parsedJson = JSON.parse(msgString);
+        isJson = true;
+      } catch (error) {}
 
-          if (payload.status === "MOBIL_VALID") {
-            setIsQrBlurred(false);
-            setStatusText("Valid Vehicle");
-            setAiConfidence(payload.confidence || "0%");
-            setAiVehicleCount(payload.vehicle_count || 0);
-            if (payload.image_base64) {
-              setLiveImage(payload.image_base64);
-            }
-          } else if (payload.status === "MOBIL_TIDAK_VALID") {
-            setIsQrBlurred(true);
-            setStatusText("Invalid Vehicle");
-            setAiConfidence(payload.confidence || "0%");
-            setAiVehicleCount(payload.vehicle_count || 0);
-            if (payload.image_base64) {
-              setLiveImage(payload.image_base64);
-            }
-          } else if (payload.status === "MOBIL_PERGI") {
-            setIsQrBlurred(true);
-            setLiveImage(null);
-            setStatusText("Standby - Menunggu Kendaraan");
-            setAiConfidence("0%");
-            setAiVehicleCount(0);
-          }
-        } catch (error) {
-          if (msgString === "MOBIL_PERGI") {
-            setIsQrBlurred(true);
-            setStatusText("Standby - Menunggu Kendaraan");
-            setAiConfidence("0%");
-            setAiVehicleCount(0);
-          }
+      // Simpan ke state System Logs
+      setSystemLogs((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          time: timeNow,
+          isJson,
+          payload: isJson ? parsedJson : msgString,
+        },
+      ]);
+
+      // Logika Utama UI (Hanya berjalan jika formatnya JSON)
+      if (topic === topicUiState && isJson) {
+        const payload = parsedJson;
+        if (payload.status === "MOBIL_VALID") {
+          setIsQrBlurred(false);
+          setStatusText("Valid Vehicle");
+          setAiConfidence(payload.confidence || "0%");
+          setAiVehicleCount(payload.vehicle_count || 0);
+          if (payload.image_base64) setLiveImage(payload.image_base64);
+        } else if (payload.status === "MOBIL_TIDAK_VALID") {
+          setIsQrBlurred(true);
+          setStatusText("Invalid Vehicle");
+          setAiConfidence(payload.confidence || "0%");
+          setAiVehicleCount(payload.vehicle_count || 0);
+          if (payload.image_base64) setLiveImage(payload.image_base64);
+        } else if (payload.status === "MOBIL_PERGI") {
+          setIsQrBlurred(true);
+          setLiveImage(null);
+          setStatusText("Standby - Menunggu Kendaraan");
+          setAiConfidence("0%");
+          setAiVehicleCount(0);
         }
+      }
+      // Jika error parsing manual (fallback seperti kode Anda sebelumnya)
+      else if (topic === topicUiState && msgString === "MOBIL_PERGI") {
+        setIsQrBlurred(true);
+        setStatusText("Standby - Menunggu Kendaraan");
+        setAiConfidence("0%");
+        setAiVehicleCount(0);
       }
     });
 
@@ -148,12 +183,56 @@ export default function DashboardSigap() {
   // --- HANDLER TOMBOL ---
   const handleManualCapture = () => {
     if (mqttClient) {
-      console.log("📸 Mengirim perintah Manual Capture...");
       mqttClient.publish(topicRequestPhoto, "TAKE_PHOTO");
-      // Tidak perlu alert, biar terlihat profesional
+      setSystemLogs((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          time: new Date().toLocaleTimeString(),
+          isJson: false,
+          payload: "💻 COMMAND: Request Manual Capture dikirim ke ESP32...",
+        },
+      ]);
     } else {
       alert("Koneksi MQTT belum siap.");
     }
+  };
+
+  // --- KOMPONEN RENDER LOG CONTENT ---
+  const renderLogContent = (log: SystemLog) => {
+    if (!log.isJson) {
+      return (
+        <span className="text-slate-300 font-mono text-xs">{log.payload}</span>
+      );
+    }
+
+    // Clone payload agar tidak merusak data asli
+    const displayData = { ...log.payload };
+    let base64String = null;
+
+    // Pisahkan base64 jika ada
+    if (displayData.image_base64) {
+      base64String = displayData.image_base64;
+      displayData.image_base64 = "[DATA_GAMBAR_TERSEMBUNYI]";
+    }
+
+    return (
+      <div className="flex flex-col gap-1">
+        <pre className="text-[10px] text-cyan-400 font-mono overflow-x-auto bg-slate-950 p-2 rounded border border-slate-800">
+          {JSON.stringify(displayData, null, 2)}
+        </pre>
+        {base64String && (
+          <details className="mt-1 group">
+            <summary className="text-[10px] text-orange-400 cursor-pointer hover:text-orange-300 font-medium select-none">
+              ▶ Tampilkan Base64 (Expand)
+            </summary>
+            <div className="text-[8px] text-slate-500 break-all mt-2 max-h-32 overflow-y-auto bg-slate-900 p-2 rounded">
+              {base64String}
+            </div>
+          </details>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -161,8 +240,8 @@ export default function DashboardSigap() {
       <Head>
         <title>Live Dashboard | SIGAP</title>
       </Head>
-      <div className="p-6 lg:p-10 font-sans min-h-screen bg-[#0F172A] text-slate-200">
-        {/* Header section */}
+      <div className="p-6 lg:p-10 font-sans min-h-screen bg-[#0F172A] text-slate-200 relative overflow-hidden">
+        {/* --- HEADER --- */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 pb-6 border-b border-slate-800">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white mb-2">
@@ -170,40 +249,41 @@ export default function DashboardSigap() {
             </h1>
             <p className="text-slate-400">Main Entry Gate Monitoring</p>
           </div>
-          <div className="flex items-center gap-4 mt-4 sm:mt-0">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs font-semibold text-green-400 uppercase tracking-wider">
-                System Online
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-slate-400">
-              <Wifi className="w-5 h-5" />
-              <Server className="w-5 h-5" />
-              <Cpu className="w-5 h-5" />
-            </div>
+
+          {/* Tombol Toggle Debug Logger */}
+          <div className="mt-4 sm:mt-0">
+            <button
+              onClick={() => setIsLogOpen(!isLogOpen)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 font-medium text-sm",
+                isLogOpen
+                  ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
+                  : "bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200",
+              )}
+            >
+              <Terminal className="w-4 h-4" />
+              {isLogOpen ? "Tutup Debug Log" : "Buka Debug Log"}
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* --- MAIN GRID --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 transition-all duration-500">
           {/* --- KIRI: QR CODE PANEL --- */}
           <div className="flex flex-col space-y-6">
             <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center relative overflow-hidden group min-h-[500px]">
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-50" />
-
               <h2 className="text-xl font-semibold text-slate-200 mb-8 relative z-10 flex items-center gap-3">
-                <QrCode className="w-6 h-6 text-cyan-400" />
-                Dynamic Entry Access
+                <QrCode className="w-6 h-6 text-cyan-400" /> Dynamic Entry
+                Access
               </h2>
 
-              {/* Cyber Frame for QR */}
               <div className="relative p-6 bg-white rounded-xl shadow-[0_0_30px_rgba(6,182,212,0.15)] transition-shadow duration-500">
                 <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-cyan-500 rounded-tl" />
                 <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-cyan-500 rounded-tr" />
                 <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-cyan-500 rounded-bl" />
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-cyan-500 rounded-br" />
 
-                {/* QR Code Image Implementation */}
                 <div className="relative w-48 h-48 md:w-64 md:h-64 border-8 border-white bg-white flex items-center justify-center overflow-hidden">
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`}
@@ -215,11 +295,10 @@ export default function DashboardSigap() {
                         : "blur-0 opacity-100",
                     )}
                   />
-                  {/* Overlay Terkunci */}
                   {isQrBlurred && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="bg-slate-900/90 text-white font-bold px-5 py-3 rounded-lg backdrop-blur-sm flex items-center gap-2 border border-slate-700 shadow-2xl">
-                        <AlertTriangle className="w-5 h-5 text-rose-500" />
+                        <AlertTriangle className="w-5 h-5 text-rose-500" />{" "}
                         LOCKED
                       </div>
                     </div>
@@ -227,7 +306,6 @@ export default function DashboardSigap() {
                 </div>
               </div>
 
-              {/* Countdown Indicator */}
               <div
                 className={cn(
                   "mt-8 flex items-center gap-3 text-sm font-medium px-4 py-2 rounded-full border transition-colors",
@@ -264,29 +342,26 @@ export default function DashboardSigap() {
           <div className="flex flex-col space-y-6">
             <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 lg:p-8 flex flex-col min-h-[500px]">
               <h2 className="text-xl font-semibold text-slate-200 mb-6 flex items-center gap-3">
-                <Camera className="w-6 h-6 text-green-400" />
-                Capture Camera Feed
+                <Camera className="w-6 h-6 text-green-400" /> Capture Camera
+                Feed
                 <span className="ml-auto flex items-center gap-2 text-xs font-mono px-2 py-1 bg-slate-950 rounded border border-slate-800 text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />{" "}
                   LIVE
                 </span>
               </h2>
 
-              {/* Camera Viewport (Sementara pakai placeholder, nanti diganti Firebase URL) */}
               <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-700 bg-slate-950 group">
                 <ImageWithFallback
-                  // src="https://images.unsplash.com/photo-1760339900750-aa0a44a32e33?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjYXIlMjBmcm9udCUyMGxpY2Vuc2UlMjBwbGF0ZXxlbnwxfHx8fDE3NzYwNTg0ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
                   src={liveImage || PLACEHOLDER_IMG}
                   alt="Live Camera Feed"
                   className={cn(
-                    "w-full h-full object-cover transition-opacity duration-300",
-                    isQrBlurred ? "opacity-30 grayscale" : "opacity-80",
+                    "w-full h-full transition-all duration-300 object-fill",
+                    !liveImage
+                      ? "opacity-30 grayscale"
+                      : "opacity-100 grayscale-0",
                   )}
                 />
 
-                <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none opacity-30" />
-
-                {/* Targeting Reticle - Warna menyesuaikan validitas */}
                 <div
                   className={cn(
                     "absolute inset-1/4 border rounded-lg pointer-events-none transition-all duration-1000",
@@ -295,6 +370,7 @@ export default function DashboardSigap() {
                       : "border-slate-500/30",
                   )}
                 >
+                  {/* Targeting Corners */}
                   <div
                     className={cn(
                       "absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 -translate-x-1 -translate-y-1",
@@ -335,7 +411,7 @@ export default function DashboardSigap() {
                 </div>
               </div>
 
-              {/* AI Metadata Chips (Dynamic Data from MQTT) */}
+              {/* AI Metadata Chips */}
               <div className="mt-6 flex flex-wrap gap-3">
                 <div
                   className={cn(
@@ -384,7 +460,7 @@ export default function DashboardSigap() {
                 </div>
               </div>
 
-              {/* Action Buttons - Manual Override */}
+              {/* Action Buttons */}
               <div className="mt-auto pt-6 border-t border-slate-800">
                 <button
                   onClick={handleManualCapture}
@@ -396,6 +472,48 @@ export default function DashboardSigap() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* --- SIDEBAR DEBUG LOGGER --- */}
+        <div
+          className={cn(
+            "fixed top-0 right-0 h-full w-full sm:w-[400px] bg-[#0B1120]/95 backdrop-blur-xl border-l border-slate-800 shadow-2xl z-50 transform transition-transform duration-500 ease-in-out flex flex-col",
+            isLogOpen ? "translate-x-0" : "translate-x-full",
+          )}
+        >
+          <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-900/50">
+            <h3 className="text-lg font-bold text-slate-200 flex items-center gap-2">
+              <Terminal className="w-5 h-5 text-cyan-400" /> System Debug Log
+            </h3>
+            <button
+              onClick={() => setIsLogOpen(false)}
+              className="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {systemLogs.length === 0 ? (
+              <div className="text-center text-slate-500 text-sm mt-10 font-mono">
+                Menunggu log dari perangkat...
+              </div>
+            ) : (
+              systemLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="bg-slate-800/30 border border-slate-800 rounded-lg p-3"
+                >
+                  <div className="text-[10px] text-slate-500 mb-1 border-b border-slate-800/50 pb-1">
+                    [{log.time}]
+                  </div>
+                  {renderLogContent(log)}
+                </div>
+              ))
+            )}
+            {/* Div kosong untuk target auto-scroll */}
+            <div ref={logEndRef} />
           </div>
         </div>
       </div>
