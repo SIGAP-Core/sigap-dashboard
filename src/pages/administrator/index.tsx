@@ -7,7 +7,6 @@ type AdminRecord = {
   id: string;
   name: string;
   email: string;
-  password: string;
 };
 
 type ModalMode = "add" | "edit";
@@ -42,7 +41,6 @@ export default function AdministratorPage() {
         id: item.id,
         name: item.name || "Unknown Admin",
         email: item.email || "no-reply@smartgate.sys",
-        password: item.password || "",
       }));
 
       setAdmins(records);
@@ -73,7 +71,7 @@ export default function AdministratorPage() {
     setSelectedAdmin(admin);
     setFormName(admin.name);
     setFormEmail(admin.email);
-    setFormPassword(admin.password);
+    setFormPassword("");
     setFormError(null);
     setModalOpen(true);
   };
@@ -285,14 +283,15 @@ export default function AdministratorPage() {
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(admin)}
-                          disabled={admin.id === (session?.user as any)?.id}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {admin.id !== (session?.user as any)?.id && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(admin)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-rose-400"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                         {/* <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-slate-100">
                           <MoreVertical className="h-4 w-4" />
                         </button> */}

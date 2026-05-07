@@ -1,11 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { adminDb } from "@/utils/db/firebase-admin";
+import { adminDb, adminAuth } from "@/utils/db/firebase-admin";
 
 type AdminRecord = {
   id: string;
   name: string;
   email: string;
-  password: string;
 };
 
 type ErrorResponse = {
@@ -25,7 +24,6 @@ export default async function handler(
           id: doc.id,
           name: (data.name as string) || "Unknown Admin",
           email: (data.email as string) || "no-reply@smartgate.sys",
-          password: (data.password as string) || "",
         };
       });
 
@@ -47,10 +45,29 @@ export default async function handler(
         return res.status(400).json({ error: "Password must be at least 6 characters long" });
       }
 
-      const docRef = await adminDb.collection("admin").add({ name, email, password });
-      return res.status(201).json({ id: docRef.id, name, email, password } as AdminRecord);
+      // Create user in Firebase Authentication
+      const userRecord = await adminAuth.createUser({
+        email,
+        password,
+        displayName: name,
+      });
+
+      // Store admin metadata in Firestore (without password)
+      await adminDb.collection("admin").doc(userRecord.uid).set({
+        name,
+        email,
+        createdAt: new Date().toISOString(),
+      });
+
+      return res.status(201).json({ id: userRecord.uid, name, email } as AdminRecord);
     } catch (error) {
-      console.error("Failed to add admin record to Firestore:", error);
+      console.error("Failed to add admin record:", error);
+      if (error instanceof Error) {
+        if (error.message.includes("already exists")) {
+          return res.status(400).json({ error: "Email already exists in authentication system" });
+        }
+        return res.status(500).json({ error: error.message });
+      }
       return res.status(500).json({ error: "Failed to add admin record" });
     }
   }
