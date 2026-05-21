@@ -70,7 +70,7 @@ export default function AdministratorPage() {
     setModalMode("edit");
     setSelectedAdmin(admin);
     setFormName(admin.name);
-    setFormEmail(admin.email);
+    setFormEmail("");
     setFormPassword("");
     setFormError(null);
     setModalOpen(true);
@@ -87,8 +87,13 @@ export default function AdministratorPage() {
     const trimmedEmail = formEmail.trim();
     const trimmedPassword = formPassword.trim();
 
-    if (!trimmedName || !trimmedEmail) {
-      setFormError("Name and email are required.");
+    if (!trimmedName) {
+      setFormError("Name is required.");
+      return;
+    }
+
+    if (modalMode === "add" && !trimmedEmail) {
+      setFormError("Email is required for new admins.");
       return;
     }
 
@@ -118,7 +123,7 @@ export default function AdministratorPage() {
           throw new Error(body?.error || `Status ${response.status}`);
         }
       } else if (modalMode === "edit" && selectedAdmin) {
-        const updateData: any = { name: trimmedName, email: trimmedEmail };
+        const updateData: any = { name: trimmedName };
         if (trimmedPassword) {
           updateData.password = trimmedPassword;
         }
@@ -315,7 +320,7 @@ export default function AdministratorPage() {
                   <p className="mt-2 text-sm text-slate-400">
                     {modalMode === "add"
                       ? "Provide the administrator’s full name, email address, and password."
-                      : "Update the admin’s name, email address, or password."}
+                      : "Update the admin’s name or password."}
                   </p>
                 </div>
                 <button
@@ -338,16 +343,18 @@ export default function AdministratorPage() {
                     className="w-full rounded-3xl border border-slate-800/80 bg-slate-950/90 px-5 py-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
                   />
                 </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-300">Email address</label>
-                  <input
-                    value={formEmail}
-                    onChange={(event) => setFormEmail(event.target.value)}
-                    type="email"
-                    placeholder="admin@example.com"
-                    className="w-full rounded-3xl border border-slate-800/80 bg-slate-950/90 px-5 py-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
-                  />
-                </div>
+                {modalMode === "add" ? (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-300">Email address</label>
+                    <input
+                      value={formEmail}
+                      onChange={(event) => setFormEmail(event.target.value)}
+                      type="email"
+                      placeholder="admin@example.com"
+                      className="w-full rounded-3xl border border-slate-800/80 bg-slate-950/90 px-5 py-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+                    />
+                  </div>
+                ) : null}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Password</label>
                   <input

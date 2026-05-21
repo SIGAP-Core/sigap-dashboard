@@ -19,12 +19,15 @@ export default async function handler(
   try {
     if (req.method === "PUT") {
       const { name, email, password } = req.body as { name?: string; email?: string; password?: string };
-      if (!name || !email) {
-        return res.status(400).json({ error: "Name and email are required" });
+      if (!name) {
+        return res.status(400).json({ error: "Name is required" });
       }
 
-      // Update Firestore document with name and email
-      const updateData: any = { name, email };
+      // Update Firestore document with provided fields
+      const updateData: any = { name };
+      if (email) {
+        updateData.email = email;
+      }
       await docRef.update(updateData);
 
       // Update password in Firebase Authentication if provided
@@ -32,15 +35,32 @@ export default async function handler(
         if (password.length < 6) {
           return res.status(400).json({ error: "Password must be at least 6 characters long" });
         }
-        await adminAuth.updateUser(id, { password });
+
+        try {
+          await adminAuth.updateUser(id, { password });
+        } catch (authError) {
+          if (authError instanceof Error && (authError as any).code === "auth/user-not-found") {
+            console.warn(`Firebase auth user not found for admin id ${id}, skipping password update.`);
+          } else {
+            throw authError;
+          }
+        }
       }
 
       return res.status(200).json({ error: "" });
     }
 
     if (req.method === "DELETE") {
-      // Delete from Firebase Authentication
-      await adminAuth.deleteUser(id);
+      // Delete from Firebase Authentication if present
+      try {
+        await adminAuth.deleteUser(id);
+      } catch (authError) {
+        if (authError instanceof Error && (authError as any).code === "auth/user-not-found") {
+          console.warn(`Firebase auth user not found for admin id ${id}, skipping auth deletion.`);
+        } else {
+          throw authError;
+        }
+      }
       
       // Delete from Firestore
       await docRef.delete();
