@@ -11,10 +11,10 @@ export default async function handler(
 ) {
   const { id } = req.query;
   if (!id || typeof id !== "string") {
-    return res.status(400).json({ error: "User ID is required" });
+    return res.status(400).json({ error: "Driver ID is required" });
   }
 
-  const docRef = adminDb.collection("user").doc(id);
+  const docRef = adminDb.collection("driver").doc(id);
 
   try {
     if (req.method === "PUT") {
