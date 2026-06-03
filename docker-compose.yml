@@ -8,6 +8,7 @@ services:
     restart: unless-stopped
     environment:
       - VIRTUAL_HOST=sigap-dashboard.duckdns.org
+      - LETSENCRYPT_HOST=sigap-dashboard.duckdns.org
       - PORT=3000
     expose:
       - "3000"
