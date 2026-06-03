@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  next-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sigap-web-dashboard
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=sigap-dashboard.duckdns.org
+      - PORT=3000
+    expose:
+      - "3000"
+    networks:
+      - proxy-network
+
+networks:
+  proxy-network:
+    external: true

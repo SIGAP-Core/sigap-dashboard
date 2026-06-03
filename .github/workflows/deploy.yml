@@ -1,0 +1,32 @@
+name: Deploy Next.js to AWS EC2
+
+on:
+  push:
+    branches:
+      - server # Pemicu: Hanya jalan saat push ke branch server
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Executing Remote SSH Commands via Password/Key
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}         # Ada di Secret Github
+          username: ${{ secrets.EC2_USERNAME }} # Ada di Secret Github
+          key: ${{ secrets.EC2_SSH_KEY }}       # Ada di Secret Github
+          port: 2222
+          script: |
+            # Masuk ke folder proyek sigap-dashboard di EC2
+            cd /home/ubuntu/sigap-dashboard
+
+            # Ambil kode terbaru dari branch server
+            git checkout server
+            git pull origin server
+
+            # Jalankan docker compose tanpa mematikan yang lama terlebih dahulu
+            docker compose up -d --build
