@@ -3,7 +3,7 @@ import { ArrowRight, ChevronDown } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative pt-32 pb-24 px-6 overflow-hidden bg-gradient-to-b from-[#070b14] to-[#0f172a]">
+    <section className="relative pt-64 pb-24 px-6 overflow-hidden bg-gradient-to-b from-[#070b14] to-[#0f172a]">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-cyan-900/10 rounded-full blur-3xl" />
 
       <div className="relative max-w-6xl mx-auto">
