@@ -36,3 +36,4 @@ next-env.d.ts
 .vscode
 firebase-admin.json
 /.idea/
+.discord-presence.json
