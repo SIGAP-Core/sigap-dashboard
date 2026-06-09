@@ -9,7 +9,7 @@ export default function App({
   router,
 }: AppProps) {
   // halaman tanpa layout
-  const noLayout = ["/auth/login"];
+  const noLayout = ["/auth/login", "/home"];
   const isNoLayout = noLayout.includes(router.pathname);
 
   return (

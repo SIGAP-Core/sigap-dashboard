@@ -10,12 +10,19 @@ export async function middleware(req: NextRequest) {
 
   const { pathname } = req.nextUrl;
 
-  // kalau belum login
-  if (!token && !pathname.startsWith("/auth/login")) {
+  // belum login: redirect / ke /home, biarkan /auth/login dan /home
+  if (
+    !token &&
+    !pathname.startsWith("/auth/login") &&
+    !pathname.startsWith("/home")
+  ) {
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/home", req.url));
+    }
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  // kalau sudah login tapi buka login page
+  // sudah login tapi buka login page, redirect ke dashboard
   if (token && pathname.startsWith("/auth/login")) {
     return NextResponse.redirect(new URL("/", req.url));
   }

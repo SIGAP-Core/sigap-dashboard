@@ -15,53 +15,9 @@ import {
   getDocs,
   query,
   orderBy,
+  doc,
+  getDoc,
 } from "firebase/firestore";
-
-// Mock data - nanti replace dengan Firebase
-const MOCK_GATE_LOGS = [
-  {
-    id: "log_001",
-    timestamp: "2025-04-16 09:15:32",
-    driverName: "Ahmad Budiman",
-    driverUID: "driver_12345abcde",
-    licensePlate: "D 1234 AB",
-  },
-  {
-    id: "log_002",
-    timestamp: "2025-04-16 09:22:45",
-    driverName: "Siti Nabila",
-    driverUID: "driver_67890fghij",
-    licensePlate: "D 5678 CD",
-  },
-  {
-    id: "log_003",
-    timestamp: "2025-04-16 09:31:12",
-    driverName: "Budi Santoso",
-    driverUID: "driver_klmnopqrst",
-    licensePlate: "D 9012 EF",
-  },
-  {
-    id: "log_004",
-    timestamp: "2025-04-16 09:45:28",
-    driverName: "Dewi Kusuma",
-    driverUID: "driver_uvwxyzabcd",
-    licensePlate: "D 3456 GH",
-  },
-  {
-    id: "log_005",
-    timestamp: "2025-04-16 10:02:55",
-    driverName: "Rudi Hermawan",
-    driverUID: "driver_efghijklmn",
-    licensePlate: "D 7890 IJ",
-  },
-  {
-    id: "log_006",
-    timestamp: "2025-04-16 10:18:14",
-    driverName: "Maya Putri",
-    driverUID: "driver_opqrstuvwx",
-    licensePlate: "D 2345 KL",
-  },
-];
 
 interface GateLog {
   id: string;
@@ -117,15 +73,71 @@ const formatTimestamp = (timestamp: number | any): string => {
 };
 
 export default function GateAccessLogs() {
-  const [logs, setLogs] = useState<GateLog[]>(MOCK_GATE_LOGS);
-  const [filteredLogs, setFilteredLogs] = useState<GateLog[]>(MOCK_GATE_LOGS);
+  const [logs, setLogs] = useState<GateLog[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<GateLog[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [drivers, setDrivers] = useState<Map<string, any>>(new Map());
 
-  // Fetch data dari Firebase Firestore
+  // Fetch drivers dari Firebase Firestore (berdasarkan uid reference)
   useEffect(() => {
+    const fetchDrivers = async () => {
+      try {
+        const db = getFirestore(app);
+        const driversRef = collection(db, "driver");
+        const driverSnapshot = await getDocs(driversRef);
+
+        // Buat map dengan uid (doc id) sebagai key untuk quick lookup
+        const driverMap = new Map();
+        console.log("=== STARTING DRIVER FETCH ===");
+
+        driverSnapshot.docs.forEach((driverDoc) => {
+          const driverData = driverDoc.data();
+          const docId = driverDoc.id;
+
+          driverMap.set(docId, {
+            name: driverData.name || "Unknown",
+            license: driverData.license || "-",
+            email: driverData.email || "",
+            status: driverData.status || "inactive",
+          });
+
+          console.log(`✓ Driver added to Map:`, {
+            docId,
+            name: driverData.name,
+            license: driverData.license,
+            email: driverData.email,
+          });
+        });
+
+        console.log("=== DRIVER FETCH COMPLETE ===", {
+          totalDrivers: driverMap.size,
+          driverIds: Array.from(driverMap.keys()),
+        });
+
+        setDrivers(driverMap);
+      } catch (error) {
+        console.error("❌ Error fetching drivers:", error);
+      }
+    };
+
+    fetchDrivers();
+  }, []);
+
+  // Fetch data dari Firebase Firestore access_logs (ONLY setelah drivers loaded)
+  useEffect(() => {
+    // Jangan fetch jika drivers belum ada
+    if (drivers.size === 0) {
+      console.log("⏳ Waiting for drivers to load... (drivers.size === 0)");
+      return;
+    }
+
+    console.log(
+      `🚀 Starting access logs fetch with ${drivers.size} drivers loaded`,
+    );
+
     const fetchGateLogs = async () => {
       try {
         setIsLoading(true);
@@ -136,29 +148,54 @@ export default function GateAccessLogs() {
         );
         const querySnapshot = await getDocs(q);
 
-        const data: GateLog[] = querySnapshot.docs.map((doc, index) => {
-          const docData = doc.data();
+        console.log(`📋 Found ${querySnapshot.docs.length} access logs`);
+
+        const data: GateLog[] = querySnapshot.docs.map((docAccess, index) => {
+          const docData = docAccess.data();
+          let driverName = "Unknown";
+          let licensePlate = "-";
+
+          // Gunakan uid dari access_logs untuk lookup di driver map
+          const uid = docData.uid;
+          const hasMatch = drivers.has(uid);
+
+          console.log(`\n[LOG ${index + 1}]`, {
+            uid,
+            drivesMapSize: drivers.size,
+            hasMatch,
+            driverData: hasMatch ? drivers.get(uid) : "NO_MATCH",
+          });
+
+          if (uid && drivers.has(uid)) {
+            const driverInfo = drivers.get(uid);
+            driverName = driverInfo.name || "Unknown";
+            licensePlate = driverInfo.license || "-";
+            console.log(`✅ MATCH FOUND: ${driverName} / ${licensePlate}`);
+          } else {
+            console.log(`❌ NO MATCH for uid: ${uid}`);
+          }
+
           return {
-            id: doc.id,
+            id: docAccess.id,
             timestamp: formatTimestamp(docData.tanggal),
-            driverName: docData.nama || "Unknown",
-            driverUID: `driver_${doc.id.substring(0, 12)}`, // Generate dari doc ID
-            licensePlate: docData.plat || "-",
+            driverName: driverName,
+            driverUID: uid || `driver_${docAccess.id.substring(0, 12)}`,
+            licensePlate: licensePlate,
           };
         });
 
+        console.log("✅ Access logs processed:", data);
         setLogs(data);
       } catch (error) {
-        console.error("Error fetching gate logs:", error);
-        // Keep mock data if error
-        setLogs(MOCK_GATE_LOGS);
+        console.error("❌ Error fetching gate logs:", error);
+        setLogs([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchGateLogs();
-  }, []);
+  }, [drivers]);
 
   // Filter logs berdasarkan search dan date
   useEffect(() => {
