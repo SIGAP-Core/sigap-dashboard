@@ -125,7 +125,7 @@ export default async function handler(
           console.log(`⚠️ [NEXT.JS] MQTT Broadcast di-skip (Kondisi needs_broadcast: false)`);
         }
 
-        // PROSES BACKGROUND HADOOP
+        // PROSES BACKGROUND HADOOP - SAVE KE HIVE
         uploadToHadoopBackground(imageBuffer, timestamp, {
           status_ai,
           vehicle_count,
@@ -147,17 +147,48 @@ export default async function handler(
   });
 }
 
-// --- FUNGSI DUMMY UNTUK HADOOP ---
-function uploadToHadoopBackground(
+// --- FUNGSI UNTUK SAVE KE HIVE VIA /api/save-visual-log ---
+async function uploadToHadoopBackground(
   imageBuffer: Buffer,
   timestamp: string,
   meta: any,
 ) {
-  console.log("⚙️ [BACKGROUND] Memulai proses upload ke Hadoop Cluster...");
-  setTimeout(() => {
-    console.log(
-      `✅ [BACKGROUND] File gambar_${timestamp}.jpg sukses disimpan di HDFS!`,
-    );
-    console.log(`✅ [BACKGROUND] Meta Log disimpan:`, meta);
-  }, 3000);
+  try {
+    console.log("⚙️ [BACKGROUND] Memulai proses save ke Hive Cluster...");
+
+    // Convert image buffer ke base64
+    const imageBase64 = `data:image/jpeg;base64,${imageBuffer.toString("base64")}`;
+
+    // Format timestamp jika belum dalam format yang benar
+    const formattedTimestamp = new Date(parseInt(timestamp) * 1000).toISOString().replace('T', ' ').split('.')[0];
+
+    // Call /api/save-visual-log endpoint
+    const response = await fetch("http://localhost:3000/api/save-visual-log", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        timestamp: formattedTimestamp,
+        ai_decision: meta.status_ai === "Success" ? "Success" : "Failed",
+        vehicle_count: parseInt(meta.vehicle_count) || 0,
+        confidence: parseInt(meta.confidence) || 0,
+        image_base64: imageBase64,
+      }),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`✅ [BACKGROUND] Data visual log berhasil disimpan ke Hive!`);
+      console.log(`   - ID: ${result.data?.id}`);
+      console.log(`   - Timestamp: ${result.data?.timestamp}`);
+      console.log(`   - Decision: ${result.data?.ai_decision}`);
+    } else {
+      const error = await response.text();
+      console.error(`❌ [BACKGROUND] Gagal save ke Hive:`, error);
+    }
+  } catch (error) {
+    console.error("❌ [BACKGROUND] Error saving to Hive:", error);
+    // Don't throw - let the main request succeed even if Hive save fails
+  }
 }

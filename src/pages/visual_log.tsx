@@ -1,83 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Search, Calendar, Download, CheckCircle, XCircle } from "lucide-react";
+import {
+  Search,
+  Calendar,
+  Download,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+} from "lucide-react";
 import { cn } from "@/utils/cn";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
-
-// Mock data - nanti replace dengan Hadoop logs
-const MOCK_VISUAL_LOGS : VisualLog[] = [
-  {
-    id: "visual_001",
-    timestamp: "2025-04-16 09:15:32",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 92,
-  },
-  {
-    id: "visual_002",
-    timestamp: "2025-04-16 09:22:45",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 88,
-  },
-  {
-    id: "visual_003",
-    timestamp: "2025-04-16 09:31:12",
-    cameraImage:
-      "https://images.unsplash.com/photo-1557821552-17105176677c?w=200&h=150&fit=crop",
-    aiDecision: "Failed",
-    vehicleCount: 0,
-    confidence: 34,
-  },
-  {
-    id: "visual_004",
-    timestamp: "2025-04-16 09:45:28",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 2,
-    confidence: 85,
-  },
-  {
-    id: "visual_005",
-    timestamp: "2025-04-16 10:02:55",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 91,
-  },
-  {
-    id: "visual_006",
-    timestamp: "2025-04-16 10:18:14",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 87,
-  },
-  {
-    id: "visual_007",
-    timestamp: "2025-04-16 10:31:08",
-    cameraImage:
-      "https://images.unsplash.com/photo-1557821552-17105176677c?w=200&h=150&fit=crop",
-    aiDecision: "Failed",
-    vehicleCount: 0,
-    confidence: 42,
-  },
-  {
-    id: "visual_008",
-    timestamp: "2025-04-16 10:45:50",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 89,
-  },
-];
 
 interface VisualLog {
   id: string;
@@ -89,12 +20,13 @@ interface VisualLog {
 }
 
 export default function VisualLogs() {
-  const [logs, setLogs] = useState<VisualLog[]>(MOCK_VISUAL_LOGS);
-  const [filteredLogs, setFilteredLogs] =
-    useState<VisualLog[]>(MOCK_VISUAL_LOGS);
+  const [logs, setLogs] = useState<VisualLog[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<VisualLog[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastFetch, setLastFetch] = useState<Date | null>(null);
 
   // Filter logs berdasarkan search dan date
   useEffect(() => {
@@ -119,22 +51,74 @@ export default function VisualLogs() {
     setFilteredLogs(result);
   }, [searchInput, dateFilter, logs]);
 
-  // Fetch data dari Hadoop (nanti implementasi)
+  /**
+   * Fetch visual logs dari Hadoop (Real Data dari Camera)
+   * Fallback ke mock jika Hadoop belum ready
+   */
+  const fetchVisualLogs = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Build query params
+      const params = new URLSearchParams();
+      if (dateFilter) {
+        params.append("startDate", dateFilter);
+      }
+      params.append("limit", "100");
+      params.append("offset", "0");
+
+      console.log("[Visual Logs] Fetching REAL data from Hadoop/Hive...");
+
+      // Fetch dari real endpoint (data dari camera capture)
+      const response = await fetch(`/api/visual-logs?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        console.log(
+          `[Visual Logs] Fetched ${result.data.length} logs from Hadoop`,
+        );
+        setLogs(result.data);
+        setLastFetch(new Date());
+      } else {
+        throw new Error(result.error || "Failed to fetch logs");
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error("[Visual Logs] Fetch error:", errorMsg);
+
+      // Fallback ke mock data jika real endpoint fail
+      if (
+        errorMsg.includes("Connect Timeout") ||
+        errorMsg.includes("ECONNREFUSED")
+      ) {
+        console.log("[Visual Logs] Hive not ready, showing notification...");
+        setError("⚠️ Hadoop/Hive belum siap. Untuk demonstrasi, pastikan:");
+        setError((prev) => prev + "\n• Hive Server running di port 8883");
+        setError((prev) => prev + "\n• MySQL Metastore sudah setup");
+        setError((prev) => prev + "\n• visual_logs table sudah create");
+        setError(
+          (prev) =>
+            prev +
+            "\n\nData real dari camera akan tampil di sini ketika Hive ready.",
+        );
+        setLogs([]); // Clear logs
+      } else {
+        setError(errorMsg);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch visual logs on component mount
   useEffect(() => {
-    // TODO: implementasi Hadoop logs fetch
-    // const fetchVisualLogs = async () => {
-    //   try {
-    //     setIsLoading(true);
-    //     const response = await fetch("/api/hadoop-logs");
-    //     const data = await response.json();
-    //     setLogs(data);
-    //   } catch (error) {
-    //     console.error("Error fetching visual logs:", error);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-    // fetchVisualLogs();
+    fetchVisualLogs();
   }, []);
 
   const handleExport = () => {
@@ -175,9 +159,41 @@ export default function VisualLogs() {
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-cyan-400 mb-2">Visual Logs</h1>
         <p className="text-slate-400">
-          AI vehicle detection logs from Hadoop analytics engine
+          📸 AI vehicle detection logs from Hadoop - Real data dari camera
+          capture
+        </p>
+        {lastFetch && (
+          <p className="text-xs text-slate-500 mt-2">
+            Last updated: {lastFetch.toLocaleTimeString()}
+          </p>
+        )}
+        <p className="text-xs text-slate-500 mt-2">
+          💡 Foto akan tampil di sini ketika mobil ter-capture oleh camera
+          sensor
         </p>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-6 p-4 rounded-lg bg-red-900 border border-red-700">
+          <p className="text-red-100 text-sm whitespace-pre-line">{error}</p>
+          <div className="mt-3 text-xs text-red-200">
+            <p className="font-semibold mb-1">
+              📖 Setup Hive untuk melihat data real dari camera:
+            </p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>
+                SSH ke namenode:{" "}
+                <code className="bg-red-800 px-2 py-1 rounded">
+                  ssh admin@100.90.109.94
+                </code>
+              </li>
+              <li>Ikuti HIVE_SETUP_GUIDE.md untuk setup Apache Hive</li>
+              <li>Restart dashboard ketika Hive sudah ready</li>
+            </ol>
+          </div>
+        </div>
+      )}
 
       {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -241,8 +257,8 @@ export default function VisualLogs() {
         </div>
       </div>
 
-      {/* Export Button */}
-      <div className="mb-6">
+      {/* Export & Refresh Buttons */}
+      <div className="mb-6 flex gap-3">
         <button
           onClick={handleExport}
           className={cn(
@@ -255,6 +271,20 @@ export default function VisualLogs() {
         >
           <Download size={18} />
           Export CSV
+        </button>
+
+        <button
+          onClick={fetchVisualLogs}
+          className={cn(
+            "inline-flex items-center gap-2 px-4 py-2 rounded-lg",
+            "bg-slate-700 text-slate-100 font-semibold",
+            "hover:bg-slate-600 transition-all duration-200",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+          )}
+          disabled={isLoading}
+        >
+          <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+          {isLoading ? "Loading..." : "Refresh"}
         </button>
       </div>
 
