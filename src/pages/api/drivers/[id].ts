@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { adminDb, adminAuth } from "@/utils/db/firebase-admin";
+import type { UserRecord } from "firebase-admin/auth";
 
 type UserErrorResponse = {
   error: string;
@@ -24,7 +25,7 @@ export default async function handler(
       }
 
       // Try to fetch existing auth user so we can update and possibly rollback
-      let previousAuth: admin.auth.UserRecord | null = null;
+      let previousAuth: UserRecord | null = null;
       try {
         previousAuth = await adminAuth.getUser(id);
       } catch (getErr) {
