@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { adminDb } from "@/utils/db/firebase-admin";
+import { adminDb, adminAuth } from "@/utils/db/firebase-admin";
 
 type UserRecord = {
   id: string;
@@ -40,15 +40,45 @@ export default async function handler(
 
   if (req.method === "POST") {
     try {
-      const { name, email, license, status } = req.body as { name?: string; email?: string; license?: string; status?: string };
-      if (!name || !email || !license || !status) {
-        return res.status(400).json({ error: "Name, email, license, and status are required" });
+      const { name, email, license, status, password } = req.body as { name?: string; email?: string; license?: string; status?: string; password?: string };
+      if (!name || !email || !license || !status || !password) {
+        return res.status(400).json({ error: "Name, email, license, status, and password are required" });
       }
 
-      const docRef = await adminDb.collection("driver").add({ name, email, license, status });
-      return res.status(201).json({ id: docRef.id, name, email, license, status } as UserRecord);
+      if (password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters long" });
+      }
+
+      // Create Firebase Authentication user
+      const userRecord = await adminAuth.createUser({
+        email,
+        password,
+        displayName: name,
+      });
+
+      // Store driver metadata in Firestore using UID as document ID
+      const docRef = adminDb.collection("driver").doc(userRecord.uid);
+      try {
+        await docRef.set({ name, email, license, status, createdAt: new Date().toISOString() });
+      } catch (firestoreError) {
+        // If Firestore write fails, cleanup created auth user to avoid orphaned accounts
+        try {
+          await adminAuth.deleteUser(userRecord.uid);
+        } catch (cleanupError) {
+          console.error("Failed to cleanup auth user after Firestore failure:", cleanupError);
+        }
+        throw firestoreError;
+      }
+
+      return res.status(201).json({ id: userRecord.uid, name, email, license, status } as UserRecord);
     } catch (error) {
-      console.error("Failed to add user record to Firestore:", error);
+      console.error("Failed to add user record to Firestore/Authentication:", error);
+      if (error instanceof Error) {
+        if (error.message.includes("already exists")) {
+          return res.status(400).json({ error: "Email already exists in authentication system" });
+        }
+        return res.status(500).json({ error: error.message });
+      }
       return res.status(500).json({ error: "Failed to add user record" });
     }
   }
