@@ -1,6 +1,7 @@
 import Head from "next/head";
 import React, { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, MoreVertical, UserCheck, UserCircle2, Search } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 type UserRecord = {
   id: string;
@@ -13,6 +14,7 @@ type UserRecord = {
 type ModalMode = "add" | "edit";
 
 export default function UserPage() {
+  const { data: session } = useSession();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -24,6 +26,7 @@ export default function UserPage() {
   const [formEmail, setFormEmail] = useState("");
   const [formLicense, setFormLicense] = useState("");
   const [formStatus, setFormStatus] = useState("active");
+  const [formPassword, setFormPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -66,6 +69,7 @@ export default function UserPage() {
     setFormEmail("");
     setFormLicense("");
     setFormStatus("active");
+    setFormPassword("");
     setFormError(null);
     setModalOpen(true);
   };
@@ -77,6 +81,7 @@ export default function UserPage() {
     setFormEmail(user.email);
     setFormLicense(user.license);
     setFormStatus(user.status);
+    setFormPassword("");
     setFormError(null);
     setModalOpen(true);
   };
@@ -91,6 +96,7 @@ export default function UserPage() {
     const trimmedName = formName.trim();
     const trimmedEmail = formEmail.trim();
     const trimmedLicense = formLicense.trim();
+    const trimmedPassword = formPassword.trim();
 
     if (!trimmedName || !trimmedEmail || !trimmedLicense || !formStatus) {
       setFormError("Name, email, license, and status are required.");
@@ -102,10 +108,22 @@ export default function UserPage() {
 
     try {
       if (modalMode === "add") {
+        if (!trimmedPassword) {
+          setFormError("Password is required for new users.");
+          setSaving(false);
+          return;
+        }
+
+        if (trimmedPassword.length < 6) {
+          setFormError("Password must be at least 6 characters long.");
+          setSaving(false);
+          return;
+        }
+
         const response = await fetch("/api/drivers", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: trimmedName, email: trimmedEmail, license: trimmedLicense, status: formStatus }),
+          body: JSON.stringify({ name: trimmedName, email: trimmedEmail, license: trimmedLicense, status: formStatus, password: trimmedPassword }),
         });
 
         if (!response.ok) {
@@ -113,10 +131,13 @@ export default function UserPage() {
           throw new Error(body?.error || `Status ${response.status}`);
         }
       } else if (modalMode === "edit" && selectedUser) {
+        const body: any = { name: trimmedName, email: trimmedEmail, license: trimmedLicense, status: formStatus };
+        if (trimmedPassword) body.password = trimmedPassword;
+
         const response = await fetch(`/api/drivers/${selectedUser.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: trimmedName, email: trimmedEmail, license: trimmedLicense, status: formStatus }),
+          body: JSON.stringify(body),
         });
 
         if (!response.ok) {
@@ -280,13 +301,15 @@ export default function UserPage() {
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(user)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-rose-400"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {user.id !== (session as any)?.user?.id && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(user)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-rose-400"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                         <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/90 text-slate-400 transition hover:bg-slate-900 hover:text-slate-100">
                           <MoreVertical className="h-4 w-4" />
                         </button>
@@ -340,6 +363,16 @@ export default function UserPage() {
                     onChange={(event) => setFormEmail(event.target.value)}
                     type="email"
                     placeholder="user@example.com"
+                    className="w-full rounded-3xl border border-slate-800/80 bg-slate-950/90 px-5 py-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Password</label>
+                  <input
+                    value={formPassword}
+                    onChange={(event) => setFormPassword(event.target.value)}
+                    type="password"
+                    placeholder={modalMode === "add" ? "Enter password" : "Leave blank to keep current password"}
                     className="w-full rounded-3xl border border-slate-800/80 bg-slate-950/90 px-5 py-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
                   />
                 </div>

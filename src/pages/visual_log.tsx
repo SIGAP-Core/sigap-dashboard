@@ -3,81 +3,6 @@ import { Search, Calendar, Download, CheckCircle, XCircle } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 
-// Mock data - nanti replace dengan Hadoop logs
-const MOCK_VISUAL_LOGS : VisualLog[] = [
-  {
-    id: "visual_001",
-    timestamp: "2025-04-16 09:15:32",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 92,
-  },
-  {
-    id: "visual_002",
-    timestamp: "2025-04-16 09:22:45",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 88,
-  },
-  {
-    id: "visual_003",
-    timestamp: "2025-04-16 09:31:12",
-    cameraImage:
-      "https://images.unsplash.com/photo-1557821552-17105176677c?w=200&h=150&fit=crop",
-    aiDecision: "Failed",
-    vehicleCount: 0,
-    confidence: 34,
-  },
-  {
-    id: "visual_004",
-    timestamp: "2025-04-16 09:45:28",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 2,
-    confidence: 85,
-  },
-  {
-    id: "visual_005",
-    timestamp: "2025-04-16 10:02:55",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 91,
-  },
-  {
-    id: "visual_006",
-    timestamp: "2025-04-16 10:18:14",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 87,
-  },
-  {
-    id: "visual_007",
-    timestamp: "2025-04-16 10:31:08",
-    cameraImage:
-      "https://images.unsplash.com/photo-1557821552-17105176677c?w=200&h=150&fit=crop",
-    aiDecision: "Failed",
-    vehicleCount: 0,
-    confidence: 42,
-  },
-  {
-    id: "visual_008",
-    timestamp: "2025-04-16 10:45:50",
-    cameraImage:
-      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=150&fit=crop",
-    aiDecision: "Success",
-    vehicleCount: 1,
-    confidence: 89,
-  },
-];
 
 interface VisualLog {
   id: string;
@@ -89,9 +14,8 @@ interface VisualLog {
 }
 
 export default function VisualLogs() {
-  const [logs, setLogs] = useState<VisualLog[]>(MOCK_VISUAL_LOGS);
-  const [filteredLogs, setFilteredLogs] =
-    useState<VisualLog[]>(MOCK_VISUAL_LOGS);
+  const [logs, setLogs] = useState<VisualLog[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<VisualLog[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -120,21 +44,34 @@ export default function VisualLogs() {
   }, [searchInput, dateFilter, logs]);
 
   // Fetch data dari Hadoop (nanti implementasi)
+  // Fetch data dari Hadoop
   useEffect(() => {
-    // TODO: implementasi Hadoop logs fetch
-    // const fetchVisualLogs = async () => {
-    //   try {
-    //     setIsLoading(true);
-    //     const response = await fetch("/api/hadoop-logs");
-    //     const data = await response.json();
-    //     setLogs(data);
-    //   } catch (error) {
-    //     console.error("Error fetching visual logs:", error);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-    // fetchVisualLogs();
+    const fetchVisualLogs = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/get-logs");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.logs) {
+            setLogs(data.logs);
+          }
+        } else {
+          console.error("Gagal mengambil data dari HDFS");
+        }
+      } catch (error) {
+        console.error("Error fetching visual logs:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Initial fetch
+    fetchVisualLogs();
+    
+    // Optional: Auto-refresh setiap 30 detik untuk visual logs terbaru
+    const intervalId = setInterval(fetchVisualLogs, 30000);
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleExport = () => {

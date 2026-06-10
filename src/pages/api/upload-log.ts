@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import formidable, { File } from "formidable";
 import fs from "fs";
 import mqtt from "mqtt";
+import { uploadToHDFS, HDFS_BASE_DIR } from "@/lib/hdfs";
 
 export const config = {
   api: {
@@ -147,17 +148,40 @@ export default async function handler(
   });
 }
 
-// --- FUNGSI DUMMY UNTUK HADOOP ---
-function uploadToHadoopBackground(
+// --- FUNGSI UPLOAD HADOOP (BACKGROUND) ---
+async function uploadToHadoopBackground(
   imageBuffer: Buffer,
   timestamp: string,
   meta: any,
 ) {
   console.log("⚙️ [BACKGROUND] Memulai proses upload ke Hadoop Cluster...");
-  setTimeout(() => {
-    console.log(
-      `✅ [BACKGROUND] File gambar_${timestamp}.jpg sukses disimpan di HDFS!`,
-    );
-    console.log(`✅ [BACKGROUND] Meta Log disimpan:`, meta);
-  }, 3000);
+  try {
+    const fileName = `visual_${timestamp}`;
+    const imagePath = `${HDFS_BASE_DIR}/${fileName}.jpg`;
+    const metaPath = `${HDFS_BASE_DIR}/${fileName}.json`;
+
+    // 1. Upload image
+    const imageSuccess = await uploadToHDFS(imagePath, imageBuffer);
+    
+    // 2. Upload metadata (JSON)
+    const metaPayload = {
+      id: fileName,
+      timestamp: meta.timestamp || timestamp,
+      aiDecision: meta.status_ai,
+      vehicleCount: meta.vehicle_count,
+      confidence: meta.confidence,
+      imageHdfsPath: imagePath
+    };
+    
+    const metaBuffer = Buffer.from(JSON.stringify(metaPayload, null, 2));
+    const metaSuccess = await uploadToHDFS(metaPath, metaBuffer);
+
+    if (imageSuccess && metaSuccess) {
+      console.log(`✅ [BACKGROUND] File gambar dan metadata sukses disimpan di HDFS! (${fileName})`);
+    } else {
+      console.error(`❌ [BACKGROUND] Gagal menyimpan sebagian atau seluruh data ke HDFS untuk ${fileName}`);
+    }
+  } catch (error) {
+    console.error("❌ [BACKGROUND] Exception saat upload HDFS:", error);
+  }
 }
