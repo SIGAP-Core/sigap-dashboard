@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { listHDFSDirectory, readHDFSJson, getHDFSFileViewUrl, HDFS_BASE_DIR } from "@/lib/hdfs";
+import { listHDFSDirectory, readHDFSJson, HDFS_BASE_DIR } from "@/lib/hdfs";
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,7 +24,9 @@ export default async function handler(
       
       if (meta) {
         // Construct the image URL
-        const imageUrl = meta.imageHdfsPath ? getHDFSFileViewUrl(meta.imageHdfsPath) : "";
+        const imageUrl = meta.imageHdfsPath
+          ? `/api/proxy-image?path=${encodeURIComponent(meta.imageHdfsPath)}`
+          : "";
         
         return {
           id: meta.id,

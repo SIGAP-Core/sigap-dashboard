@@ -3,6 +3,22 @@ export const HDFS_USER =
   process.env.NEXT_PUBLIC_HDFS_USER || "hadoopuser";
 export const HDFS_BASE_DIR = "/sigap/visual_logs";
 
+const HADOOP_HOSTNAME_MAP: Record<string, string> = {
+  "hadoop-namenode": "100.90.109.94",
+  "namenode": "100.90.109.94",
+
+  "hadoop-datanode1": "100.97.93.48",
+  "datanode1": "100.97.93.48",
+
+  "hadoop-datanode2-1": "100.116.70.125",
+  "hadoop-datanode2": "100.116.70.125",
+  "datanode2-1": "100.116.70.125",
+  "datanode2": "100.116.70.125",
+
+  "hadoop-datanode3": "100.100.211.62",
+  "datanode3": "100.100.211.62",
+};
+
 /**
  * Uploads a buffer to HDFS via WebHDFS.
  */
@@ -36,8 +52,9 @@ export async function uploadToHDFS(filePath: string, buffer: Buffer): Promise<bo
       return false;
     }
 
-    // Step 2: Submit another HTTP PUT request using the URL in the Location header with the file data
-    const response2 = await fetch(dataNodeUrl, {
+    // Step 2: Resolve hostname dan upload file ke DataNode
+    const resolvedUrl = resolveDataNodeUrl(dataNodeUrl);
+    const response2 = await fetch(resolvedUrl, {
       method: "PUT",
       body: buffer as unknown as BodyInit,
     });
@@ -91,10 +108,9 @@ export async function listHDFSDirectory(dirPath: string): Promise<any[]> {
  */
 function resolveDataNodeUrl(url: string): string {
   let resolvedUrl = url;
-  // Ganti hostname internal Hadoop dengan IP Tailscale yang sesuai
-  resolvedUrl = resolvedUrl.replace('://sasami:', '://100.109.248.117:');
-  resolvedUrl = resolvedUrl.replace('://datanode3:', '://100.100.211.62:');
-  // Tambahkan mapping lain di sini jika diperlukan
+  for (const [hostname, ip] of Object.entries(HADOOP_HOSTNAME_MAP)) {
+    resolvedUrl = resolvedUrl.replace(`://${hostname}:`, `://${ip}:`);
+  }
   return resolvedUrl;
 }
 
@@ -147,11 +163,50 @@ export async function readHDFSJson(filePath: string): Promise<any> {
 }
 
 /**
- * Returns the URL to directly view/download a file via WebHDFS.
- * Jika URL melibatkan redirect ke DataNode, browser mungkin gagal membukanya jika tidak mengenali hostname.
- * Sebagai alternatif yang lebih aman untuk proxy gambar, kita bisa membuatkan API route khusus, 
- * tapi untuk sementara kita gunakan URL NameNode ini (redirect akan ditangani oleh browser pengguna).
+ * Reads a file from HDFS and returns it as a Buffer (for binary files like images).
  */
+export async function readHDFSFile(filePath: string): Promise<Buffer | null> {
+  try {
+    const openUrl = `${HDFS_URL}/webhdfs/v1${filePath}?op=OPEN&user.name=${HDFS_USER}`;
+
+    const response1 = await fetch(openUrl, {
+      method: "GET",
+      redirect: "manual",
+    });
+
+    let dataNodeUrl = "";
+    if (response1.status === 307 || response1.status === 302) {
+      dataNodeUrl = response1.headers.get("location") || "";
+      dataNodeUrl = resolveDataNodeUrl(dataNodeUrl);
+    } else if (response1.status >= 200 && response1.status < 300) {
+      const buffer = await response1.arrayBuffer();
+      return Buffer.from(buffer);
+    } else {
+      console.error(`[HDFS] Error initiating read for ${filePath}. Status: ${response1.status}`);
+      return null;
+    }
+
+    if (!dataNodeUrl) {
+      console.error(`[HDFS] No redirect location found for ${filePath}`);
+      return null;
+    }
+
+    const response2 = await fetch(dataNodeUrl, { method: "GET" });
+
+    if (!response2.ok) {
+      console.error(`[HDFS] Error reading file ${filePath} from DataNode. Status: ${response2.status}`);
+      return null;
+    }
+
+    const buffer = await response2.arrayBuffer();
+    return Buffer.from(buffer);
+  } catch (error) {
+    console.error(`[HDFS] Exception reading file ${filePath}:`, error);
+    return null;
+  }
+}
+
+/** @deprecated Gunakan proxy endpoint `/api/proxy-image` saja, karena browser tidak bisa resolve hostname internal Hadoop. */
 export function getHDFSFileViewUrl(filePath: string): string {
   return `${HDFS_URL}/webhdfs/v1${filePath}?op=OPEN&user.name=${HDFS_USER}`;
 }
