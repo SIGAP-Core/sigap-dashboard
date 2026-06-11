@@ -28,11 +28,21 @@ export default async function handler(
           ? `/api/proxy-image?path=${encodeURIComponent(meta.imageHdfsPath)}`
           : "";
         
+        // Map raw status strings to expected UI formats
+        let decision = "Failed";
+        if (
+          meta.aiDecision === "MOBIL_VALID" || 
+          meta.aiDecision === "Kendaraan Valid" || 
+          meta.aiDecision === "Success"
+        ) {
+          decision = "Success";
+        }
+
         return {
           id: meta.id,
           timestamp: meta.timestamp,
           cameraImage: imageUrl,
-          aiDecision: meta.aiDecision,
+          aiDecision: decision,
           vehicleCount: meta.vehicleCount,
           confidence: parseInt(meta.confidence?.replace('%', '') || "0", 10),
         };
