@@ -52,21 +52,42 @@ export async function uploadToHDFS(filePath: string, buffer: Buffer): Promise<bo
       return false;
     }
 
-    // Step 2: Resolve hostname dan upload file ke DataNode
+    // Step 2: Resolve hostname dan upload file ke DataNode menggunakan http module native (menghindari bug node-fetch/undici dengan WebHDFS)
     const resolvedUrl = resolveDataNodeUrl(dataNodeUrl);
-    const response2 = await fetch(resolvedUrl, {
-      method: "PUT",
-      body: buffer as unknown as BodyInit,
-    });
+    
+    return new Promise((resolve) => {
+      const url = new URL(resolvedUrl);
+      const http = require('http');
+      
+      const options = {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname + url.search,
+        method: 'PUT',
+        headers: {
+          'Content-Length': buffer.length,
+          'Content-Type': 'application/octet-stream'
+        }
+      };
 
-    if (response2.status >= 200 && response2.status < 300) {
-      console.log(`[HDFS] Successfully uploaded: ${filePath}`);
-      return true;
-    } else {
-      const errText = await response2.text();
-      console.error(`[HDFS] Error completing upload for ${filePath}. Status: ${response2.status}, Body: ${errText}`);
-      return false;
-    }
+      const req = http.request(options, (res: any) => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`[HDFS] Successfully uploaded: ${filePath}`);
+          resolve(true);
+        } else {
+          console.error(`[HDFS] Error completing upload for ${filePath}. Status: ${res.statusCode}`);
+          resolve(false);
+        }
+      });
+
+      req.on('error', (e: any) => {
+        console.error(`[HDFS] Socket/HTTP Exception completing upload for ${filePath}: ${e.message}`);
+        resolve(false);
+      });
+
+      req.write(buffer);
+      req.end();
+    });
   } catch (error) {
     console.error(`[HDFS] Exception uploading ${filePath}:`, error);
     return false;
