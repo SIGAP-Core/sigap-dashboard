@@ -146,6 +146,28 @@ export default function DashboardSigap() {
       // Logika Utama UI (Hanya berjalan jika formatnya JSON)
       if (topic === topicUiState && isJson) {
         const payload = parsedJson;
+
+        // --- TAMBAHAN BARU: Kirim ke HDFS via API lokal ---
+        // Memastikan ada status dan ada image_base64 agar tidak menyimpan log yang kosong
+        if (payload.status && payload.image_base64) {
+          fetch('/api/save-mqtt-log', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              status: payload.status,
+              vehicle_count: payload.vehicle_count,
+              confidence: payload.confidence,
+              image_base64: payload.image_base64
+            })
+          })
+          .then(res => res.json())
+          .then(data => console.log("HDFS Save Triggered:", data))
+          .catch(err => console.error("Gagal trigger save HDFS:", err));
+        }
+        // ---------------------------------------------------
+
         if (payload.status === "MOBIL_VALID") {
           setIsQrBlurred(false);
           setStatusText("Valid Vehicle");
